@@ -316,7 +316,7 @@ export default function MenuTab() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: pendingMenu.id,
+          staged_id: pendingMenu.id,
           week_of: pendingMenu.week_of,
           meals: pendingMenu.meals,
           queue_id: pendingMenu.queue_id,
