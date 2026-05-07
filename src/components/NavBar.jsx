@@ -10,10 +10,13 @@ function BookIcon({ active }) {
     </svg>
   )
 }
-function PenIcon({ active }) {
+function BibleIcon({ active }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? GOLD : MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <line x1="13" y1="6.5" x2="13" y2="13.5" />
+      <line x1="9.5" y1="10" x2="16.5" y2="10" />
     </svg>
   )
 }
@@ -27,7 +30,11 @@ function AnchorIcon({ active }) {
 function BodyIcon({ active }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? GOLD : MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <line x1="7" y1="8" x2="7" y2="16" />
+      <line x1="17" y1="8" x2="17" y2="16" />
+      <line x1="4" y1="9.5" x2="4" y2="14.5" />
+      <line x1="20" y1="9.5" x2="20" y2="14.5" />
     </svg>
   )
 }
@@ -49,9 +56,9 @@ function CaptureIcon({ active }) {
 }
 
 const tabs = [
-  { id: 'brief',   label: 'Brief',   Icon: BookIcon },
-  { id: 'soap',    label: 'SOAP',    Icon: PenIcon },
   { id: 'anchor',  label: 'Anchor',  Icon: AnchorIcon },
+  { id: 'brief',   label: 'Brief',   Icon: BookIcon },
+  { id: 'soap',    label: 'SOAP',    Icon: BibleIcon },
   { id: 'body',    label: 'Body',    Icon: BodyIcon },
   { id: 'menu',    label: 'Menu',    Icon: MenuNavIcon },
   { id: 'capture', label: 'Capture', Icon: CaptureIcon },

@@ -22,7 +22,7 @@ function renderTab(active) {
 }
 
 export default function App() {
-  const [active, setActive] = useState('brief')
+  const [active, setActive] = useState('anchor')
 
   return (
     <div style={{ background: LINEN, minHeight: '100vh' }}>
