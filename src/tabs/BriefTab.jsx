@@ -15,23 +15,45 @@ import ClosingLineBlock from '../components/brief/ClosingLineBlock'
 
 const LINEN = '#F5F0E8'
 const MUTED = '#78716C'
+const GOLD = '#C4973A'
+const INK = '#1C1917'
+const RULE = '#D6CFC4'
+
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00')
+  return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`
+}
+
+function calcStreak(dates) {
+  if (!dates.length) return 0
+  const sorted = [...dates].sort((a, b) => new Date(b) - new Date(a))
+  let streak = 1
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const diff = (new Date(sorted[i] + 'T12:00:00') - new Date(sorted[i+1] + 'T12:00:00')) / (1000*60*60*24)
+    if (diff === 1) streak++
+    else break
+  }
+  return streak
+}
 
 export default function BriefTab() {
   const [brief, setBrief] = useState(null)
+  const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     async function fetchBrief() {
-      const { data, error } = await supabase
-        .from('daily_briefs')
-        .select('id, date, sections, generated_at')
-        .order('date', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (error) setError(error.message)
-      else setBrief(data)
+      const [briefRes, streakRes] = await Promise.all([
+        supabase.from('daily_briefs').select('id, date, sections, generated_at').order('date', { ascending: false }).limit(1).single(),
+        supabase.from('daily_briefs').select('date').order('date', { ascending: false }).limit(60),
+      ])
+      if (briefRes.error) setError(briefRes.error.message)
+      else setBrief(briefRes.data)
+      if (streakRes.data) setStreak(calcStreak(streakRes.data.map(r => r.date)))
       setLoading(false)
     }
     fetchBrief()
@@ -62,6 +84,30 @@ export default function BriefTab() {
   return (
     <div style={{ background: LINEN, minHeight: '100%' }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 28px 120px' }}>
+
+        {/* Date + Streak Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div>
+            <p style={{ fontSize: 11, letterSpacing: '0.18em', color: MUTED, textTransform: 'uppercase', margin: '0 0 4px', fontFamily: 'system-ui, sans-serif' }}>
+              Daily Brief
+            </p>
+            <p style={{ fontSize: 22, fontWeight: 700, color: INK, margin: 0, fontFamily: "'Georgia', serif", lineHeight: 1.2 }}>
+              {brief.date ? formatDate(brief.date) : ''}
+            </p>
+          </div>
+          {streak > 0 && (
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: 24, fontWeight: 700, color: GOLD, margin: 0, fontFamily: "'Georgia', serif", lineHeight: 1 }}>
+                {streak}
+              </p>
+              <p style={{ fontSize: 10, letterSpacing: '0.14em', color: MUTED, textTransform: 'uppercase', margin: '3px 0 0', fontFamily: 'system-ui, sans-serif' }}>
+                day streak
+              </p>
+            </div>
+          )}
+        </div>
+        <div style={{ borderTop: `1px solid ${RULE}`, marginBottom: 36 }} />
+
         <FaithAnchorBlock data={s.faith_anchor} />
         <TodayFrameBlock data={s.today_frame} />
         <ProtocolBlock data={s.protocol} />
