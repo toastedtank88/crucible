@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { supabase } from '../supabase'
 
 const LINEN = '#F5F0E8'
@@ -6,6 +7,51 @@ const INK = '#1C1917'
 const GOLD = '#C4973A'
 const MUTED = '#78716C'
 const RULE = '#D6CFC4'
+
+const mdComponents = {
+  h1: ({ children }) => (
+    <h1 style={{ fontSize: 22, fontWeight: 700, color: INK, margin: '32px 0 10px', lineHeight: 1.25, fontFamily: "'Georgia', 'Times New Roman', serif" }}>{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <div style={{ marginTop: 32, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.12em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' }}>
+          {children}
+        </span>
+        <div style={{ flex: 1, borderTop: `1px solid ${RULE}` }} />
+      </div>
+    </div>
+  ),
+  h3: ({ children }) => (
+    <h3 style={{ fontSize: 16, fontWeight: 600, color: INK, margin: '20px 0 6px', fontFamily: "'Georgia', 'Times New Roman', serif" }}>{children}</h3>
+  ),
+  p: ({ children }) => (
+    <p style={{ fontSize: 16, lineHeight: 1.8, color: INK, margin: '0 0 14px' }}>{children}</p>
+  ),
+  strong: ({ children }) => (
+    <strong style={{ fontWeight: 700, color: INK }}>{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em style={{ fontStyle: 'italic' }}>{children}</em>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote style={{ borderLeft: `3px solid ${GOLD}`, paddingLeft: 16, margin: '16px 0', color: MUTED }}>
+      {children}
+    </blockquote>
+  ),
+  ul: ({ children }) => (
+    <ul style={{ paddingLeft: 20, margin: '0 0 14px', color: INK }}>{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol style={{ paddingLeft: 20, margin: '0 0 14px', color: INK }}>{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li style={{ fontSize: 16, lineHeight: 1.7, marginBottom: 4 }}>{children}</li>
+  ),
+  hr: () => (
+    <div style={{ borderTop: `1px solid ${RULE}`, margin: '24px 0' }} />
+  ),
+}
 
 export default function SOAPTab() {
   const [entry, setEntry] = useState(null)
@@ -62,18 +108,14 @@ export default function SOAPTab() {
           {entry.page_title || 'Daily SOAP'}
         </h1>
         <div style={{ borderTop: `1px solid ${RULE}`, marginBottom: 28 }} />
-        <div style={{ fontSize: 16, lineHeight: 1.8, color: INK, whiteSpace: 'pre-wrap' }}>
-          {entry.content}
-        </div>
+        <ReactMarkdown components={mdComponents}>{entry.content}</ReactMarkdown>
         {entry.evening_content && (
           <>
             <div style={{ borderTop: `1px solid ${RULE}`, margin: '40px 0 28px' }} />
             <p style={{ fontSize: 11, letterSpacing: '0.18em', color: GOLD, textTransform: 'uppercase', marginBottom: 16, fontFamily: 'system-ui, sans-serif' }}>
               Evening Reflection
             </p>
-            <div style={{ fontSize: 16, lineHeight: 1.8, color: INK, whiteSpace: 'pre-wrap' }}>
-              {entry.evening_content}
-            </div>
+            <ReactMarkdown components={mdComponents}>{entry.evening_content}</ReactMarkdown>
           </>
         )}
       </div>
