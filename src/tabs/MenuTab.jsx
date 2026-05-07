@@ -237,6 +237,7 @@ export default function MenuTab() {
   const [pendingMenu, setPendingMenu] = useState(null)
   const [approving, setApproving] = useState(false)
   const [approveError, setApproveError] = useState(null)
+  const [driveUrl, setDriveUrl] = useState(null)
 
   // State 2 — published
   const [publishedMenus, setPublishedMenus] = useState([])
@@ -312,7 +313,7 @@ export default function MenuTab() {
 
     const webhookUrl = import.meta.env.VITE_N8N_MENU_APPROVE_WEBHOOK
     try {
-      await fetch(webhookUrl, {
+      const res = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,6 +323,10 @@ export default function MenuTab() {
           queue_id: pendingMenu.queue_id,
         }),
       })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.drive_url) setDriveUrl(json.drive_url)
+      }
     } catch {
       // Non-fatal — continue to mark approved in DB
     }
@@ -537,6 +542,33 @@ export default function MenuTab() {
             >
               {approving ? 'Approving…' : 'Approve Menu'}
             </button>
+            {driveUrl && (
+              <a
+                href={driveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginTop: 12,
+                  background: 'transparent',
+                  border: `1px solid ${GOLD}`,
+                  borderRadius: 6,
+                  padding: '14px',
+                  fontSize: 13,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: GOLD,
+                  fontFamily: 'system-ui, sans-serif',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                Download Menu Doc
+              </a>
+            )}
           </div>
         </div>
       </div>
