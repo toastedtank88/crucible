@@ -261,14 +261,14 @@ export default function MenuTab() {
   const monday = getMondayOfCurrentWeek()
 
   useEffect(() => {
-    const thursday = new Date(monday)
-    thursday.setDate(monday.getDate() + 3)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
 
     supabase
       .from('recent_menus')
       .select('*, recipe:recipes(*)')
       .gte('date_served', toISO(monday))
-      .lte('date_served', toISO(thursday))
+      .lte('date_served', toISO(sunday))
       .order('date_served', { ascending: true })
       .then(({ data, error }) => {
         if (error) setError(error.message)
@@ -340,6 +340,13 @@ export default function MenuTab() {
   const weekDays = WEEKDAYS.map((dayName, i) => {
     const date = new Date(monday)
     date.setDate(monday.getDate() + i)
+    const iso = toISO(date)
+    return { dayName, iso, menu: menus.find((m) => m.date_served === iso) ?? null }
+  })
+
+  const satSunDays = ['Saturday', 'Sunday'].map((dayName, i) => {
+    const date = new Date(monday)
+    date.setDate(monday.getDate() + 5 + i)
     const iso = toISO(date)
     return { dayName, iso, menu: menus.find((m) => m.date_served === iso) ?? null }
   })
@@ -439,6 +446,66 @@ export default function MenuTab() {
 
         {/* Friday — always Family Out, no recipe, no actions */}
         <FridayCard />
+
+        {/* Sat–Sun */}
+        {satSunDays.map(({ dayName, iso, menu }) => {
+          const isExpanded = expandedIso === iso
+          const hasMenu = menu !== null
+
+          return (
+            <div key={iso} style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
+              <div
+                onClick={() => hasMenu && handleToggle(iso)}
+                style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', cursor: hasMenu ? 'pointer' : 'default', gap: 8 }}
+              >
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 4 }}>
+                    {dayName}
+                  </p>
+                  <p style={{ fontSize: 17, color: hasMenu ? INK : MUTED, lineHeight: 1.3, margin: '0 0 3px', fontStyle: hasMenu ? 'normal' : 'italic' }}>
+                    {hasMenu ? menu.meal_name : 'No meal planned'}
+                  </p>
+                  {menu?.cuisine_type && (
+                    <p style={{ fontSize: 12, color: MUTED, fontFamily: 'system-ui, sans-serif', letterSpacing: '0.06em', margin: 0 }}>
+                      {menu.cuisine_type}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, paddingTop: 2 }}>
+                  {hasMenu && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRate(menu.id, 1) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: menu.rating === 1 ? 1 : 0.4 }}
+                      >
+                        <ThumbsUpIcon active={menu.rating === 1} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRate(menu.id, -1) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: menu.rating === -1 ? 1 : 0.4 }}
+                      >
+                        <ThumbsDownIcon active={menu.rating === -1} />
+                      </button>
+                    </>
+                  )}
+                  {hasMenu && <ChevronIcon up={isExpanded} />}
+                </div>
+              </div>
+
+              {isExpanded && hasMenu && (
+                <RecipeDetail
+                  recipe={menu.recipe}
+                  showSwap={showSwap}
+                  onOpenSwap={handleOpenSwap}
+                  onSwap={handleSwap}
+                  onCloseSwap={() => setShowSwap(false)}
+                  recipes={allRecipes}
+                  loadingRecipes={loadingRecipes}
+                />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
