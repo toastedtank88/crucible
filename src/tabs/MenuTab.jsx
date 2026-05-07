@@ -7,21 +7,7 @@ const INK = '#1C1917'
 const MUTED = '#78716C'
 const RULE = '#D6CFC4'
 
-const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday']
-
-function getMondayOfCurrentWeek() {
-  const today = new Date()
-  const day = today.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  const monday = new Date(today)
-  monday.setDate(today.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-
-function toISO(date) {
-  return date.toISOString().split('T')[0]
-}
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +57,22 @@ function SectionDivider({ label }) {
       <div style={{ flex: 1, borderTop: `1px solid ${RULE}` }} />
     </div>
   )
+}
+
+function FridayCard() {
+  return (
+    <div style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
+      <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
+        Friday
+      </p>
+      <p style={{ fontSize: 17, color: MUTED, fontStyle: 'italic', margin: 0 }}>Family Out</p>
+    </div>
+  )
+}
+
+function weekLabel(weekOf) {
+  if (!weekOf) return '—'
+  return new Date(weekOf + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase()
 }
 
 // ── Swap picker ─────────────────────────────────────────────────────────────
@@ -125,7 +127,7 @@ function SwapPicker({ recipes, loading, currentRecipeId, onSelect, onClose }) {
   )
 }
 
-// ── Recipe detail ───────────────────────────────────────────────────────────
+// ── Recipe detail (published state) ─────────────────────────────────────────
 
 function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recipes, loadingRecipes }) {
   const swapBtnStyle = {
@@ -150,9 +152,7 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
         <p style={{ fontSize: 14, color: MUTED, fontFamily: 'system-ui, sans-serif', marginBottom: 12 }}>
           No recipe linked.
         </p>
-        {!showSwap && (
-          <button onClick={onOpenSwap} style={swapBtnStyle}>Pick a Recipe</button>
-        )}
+        {!showSwap && <button onClick={onOpenSwap} style={swapBtnStyle}>Pick a Recipe</button>}
         {showSwap && (
           <SwapPicker
             recipes={recipes}
@@ -168,7 +168,6 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
 
   return (
     <div style={{ paddingTop: 20 }}>
-      {/* Meta stats */}
       {(recipe.servings || recipe.prep_time_minutes || recipe.cook_time_minutes) && (
         <div style={{ display: 'flex', gap: 24, marginBottom: 20 }}>
           {recipe.servings && <MetaStat value={recipe.servings} label="Servings" />}
@@ -177,7 +176,6 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
         </div>
       )}
 
-      {/* Ingredients */}
       {recipe.ingredients?.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <SectionDivider label="Ingredients" />
@@ -192,7 +190,6 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
         </div>
       )}
 
-      {/* Instructions */}
       {recipe.instructions?.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <SectionDivider label="Instructions" />
@@ -207,7 +204,6 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
         </div>
       )}
 
-      {/* Notes */}
       {recipe.notes && (
         <div style={{ background: '#EDE9E3', borderRadius: 4, padding: '12px 14px', marginBottom: 20 }}>
           <p style={{ fontSize: 11, letterSpacing: '0.1em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
@@ -217,10 +213,7 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
         </div>
       )}
 
-      {/* Swap button / picker */}
-      {!showSwap && (
-        <button onClick={onOpenSwap} style={swapBtnStyle}>Swap Meal</button>
-      )}
+      {!showSwap && <button onClick={onOpenSwap} style={swapBtnStyle}>Swap Meal</button>}
       {showSwap && (
         <SwapPicker
           recipes={recipes}
@@ -234,122 +227,180 @@ function RecipeDetail({ recipe, showSwap, onOpenSwap, onSwap, onCloseSwap, recip
   )
 }
 
-// ── Friday card ─────────────────────────────────────────────────────────────
-
-function FridayCard() {
-  return (
-    <div style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
-      <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
-        Friday
-      </p>
-      <p style={{ fontSize: 17, color: MUTED, fontStyle: 'italic', margin: 0 }}>Family Out</p>
-    </div>
-  )
-}
-
 // ── Main component ──────────────────────────────────────────────────────────
 
 export default function MenuTab() {
-  const [menus, setMenus] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [expandedIso, setExpandedIso] = useState(null)
-  const [showSwap, setShowSwap] = useState(false)
+
+  // State 1 — pending
+  const [pendingMenu, setPendingMenu] = useState(null)
+  const [approving, setApproving] = useState(false)
+  const [approveError, setApproveError] = useState(null)
+
+  // State 2 — published
+  const [publishedMenus, setPublishedMenus] = useState([])
+  const [weekOf, setWeekOf] = useState(null)
+
+  // Shared interaction state
+  const [expandedDay, setExpandedDay] = useState(null)
+  const [swapDay, setSwapDay] = useState(null)
   const [allRecipes, setAllRecipes] = useState([])
   const [loadingRecipes, setLoadingRecipes] = useState(false)
 
-  const monday = getMondayOfCurrentWeek()
+  useEffect(() => { loadData() }, [])
 
-  useEffect(() => {
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
+  async function loadData() {
+    setLoading(true)
+    setError(null)
 
-    supabase
+    const { data: staged, error: stagedErr } = await supabase
+      .from('staged_menus')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (stagedErr) {
+      setError(stagedErr.message)
+      setLoading(false)
+      return
+    }
+
+    if (staged) {
+      setPendingMenu(staged)
+      setLoading(false)
+      return
+    }
+
+    await loadPublished()
+    setLoading(false)
+  }
+
+  async function loadPublished() {
+    const { data: menus, error: menusErr } = await supabase
       .from('recent_menus')
       .select('*, recipe:recipes(*)')
-      .gte('date_served', toISO(monday))
-      .lte('date_served', toISO(sunday))
+      .order('week_of', { ascending: false })
       .order('date_served', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) setError(error.message)
-        else setMenus(data || [])
-        setLoading(false)
+
+    if (menusErr) {
+      setError(menusErr.message)
+      return
+    }
+
+    if (menus && menus.length > 0) {
+      const mostRecentWeek = menus[0].week_of
+      setWeekOf(mostRecentWeek)
+      setPublishedMenus(menus.filter((m) => m.week_of === mostRecentWeek))
+    }
+  }
+
+  async function ensureRecipes() {
+    if (allRecipes.length > 0) return
+    setLoadingRecipes(true)
+    const { data } = await supabase.from('recipes').select('id, meal_name, cuisine_type').order('meal_name')
+    setAllRecipes(data || [])
+    setLoadingRecipes(false)
+  }
+
+  async function handleApprove() {
+    if (!pendingMenu || approving) return
+    setApproving(true)
+    setApproveError(null)
+
+    const webhookUrl = import.meta.env.VITE_N8N_MENU_APPROVE_WEBHOOK
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: pendingMenu.id,
+          week_of: pendingMenu.week_of,
+          meals: pendingMenu.meals,
+          queue_id: pendingMenu.queue_id,
+        }),
       })
-  }, [])
+    } catch {
+      // Non-fatal — continue to mark approved in DB
+    }
 
-  function handleToggle(iso) {
-    if (expandedIso === iso) {
-      setExpandedIso(null)
-      setShowSwap(false)
+    const { error: updateErr } = await supabase
+      .from('staged_menus')
+      .update({ status: 'approved', approved_at: new Date().toISOString() })
+      .eq('id', pendingMenu.id)
+
+    if (updateErr) {
+      setApproveError(updateErr.message)
+      setApproving(false)
+      return
+    }
+
+    setPendingMenu(null)
+    setExpandedDay(null)
+    setSwapDay(null)
+    setApproving(false)
+    await loadPublished()
+  }
+
+  // Pending: update a day's meal in staged_menus.meals JSONB
+  async function handlePendingSwap(day, recipe) {
+    const updatedMeals = (pendingMenu.meals || []).map((m) => {
+      const mDay = m.day || m.day_of_week || m.day_name
+      return mDay === day ? { ...m, meal_name: recipe.meal_name, cuisine_type: recipe.cuisine_type, recipe_id: recipe.id } : m
+    })
+    setPendingMenu((prev) => ({ ...prev, meals: updatedMeals }))
+    setSwapDay(null)
+    await supabase.from('staged_menus').update({ meals: updatedMeals }).eq('id', pendingMenu.id)
+  }
+
+  // Published: toggle expand
+  function handleToggle(day) {
+    if (expandedDay === day) {
+      setExpandedDay(null)
+      setSwapDay(null)
     } else {
-      setExpandedIso(iso)
-      setShowSwap(false)
+      setExpandedDay(day)
+      setSwapDay(null)
     }
   }
 
+  // Published: thumbs rating
   async function handleRate(menuId, value) {
-    const target = menus.find((m) => m.id === menuId)
+    const target = publishedMenus.find((m) => m.id === menuId)
     const newRating = target?.rating === value ? null : value
-
-    setMenus((prev) => prev.map((m) => (m.id === menuId ? { ...m, rating: newRating } : m)))
-
-    const { error } = await supabase
-      .from('recent_menus')
-      .update({ rating: newRating })
-      .eq('id', menuId)
-
+    setPublishedMenus((prev) => prev.map((m) => (m.id === menuId ? { ...m, rating: newRating } : m)))
+    const { error } = await supabase.from('recent_menus').update({ rating: newRating }).eq('id', menuId)
     if (error) {
-      setMenus((prev) => prev.map((m) => (m.id === menuId ? { ...m, rating: target?.rating } : m)))
+      setPublishedMenus((prev) => prev.map((m) => (m.id === menuId ? { ...m, rating: target?.rating } : m)))
     }
   }
 
-  async function handleOpenSwap() {
-    setShowSwap(true)
-    if (allRecipes.length === 0) {
-      setLoadingRecipes(true)
-      const { data } = await supabase
-        .from('recipes')
-        .select('id, meal_name, cuisine_type')
-        .order('meal_name')
-      setAllRecipes(data || [])
-      setLoadingRecipes(false)
-    }
-  }
-
-  async function handleSwap(recipe) {
-    const menu = menus.find((m) => m.date_served === expandedIso)
+  // Published: swap meal
+  async function handlePublishedSwap(day, recipe) {
+    const menu = publishedMenus.find((m) => m.day_of_week === day)
     if (!menu) return
-
-    setMenus((prev) =>
+    setPublishedMenus((prev) =>
       prev.map((m) =>
         m.id === menu.id
           ? { ...m, meal_name: recipe.meal_name, cuisine_type: recipe.cuisine_type, recipe_id: recipe.id, recipe }
           : m
       )
     )
-    setShowSwap(false)
-
+    setSwapDay(null)
     await supabase
       .from('recent_menus')
       .update({ recipe_id: recipe.id, meal_name: recipe.meal_name, cuisine_type: recipe.cuisine_type })
       .eq('id', menu.id)
   }
 
-  const weekLabel = monday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase()
+  async function handleOpenSwap(day) {
+    setSwapDay(day)
+    await ensureRecipes()
+  }
 
-  const weekDays = WEEKDAYS.map((dayName, i) => {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + i)
-    const iso = toISO(date)
-    return { dayName, iso, menu: menus.find((m) => m.date_served === iso) ?? null }
-  })
-
-  const satSunDays = ['Saturday', 'Sunday'].map((dayName, i) => {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + 5 + i)
-    const iso = toISO(date)
-    return { dayName, iso, menu: menus.find((m) => m.date_served === iso) ?? null }
-  })
+  // ── Loading / error ─────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -369,32 +420,167 @@ export default function MenuTab() {
     )
   }
 
+  // ── State 1: Pending review ─────────────────────────────────────────────────
+
+  if (pendingMenu) {
+    const meals = pendingMenu.meals || []
+    const getMeal = (day) => meals.find((m) => (m.day || m.day_of_week || m.day_name) === day) ?? null
+
+    return (
+      <div style={{ background: LINEN, minHeight: '100%', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 28px 120px' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, letterSpacing: '0.12em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif' }}>
+              Week of {weekLabel(pendingMenu.week_of)}
+            </span>
+            <div style={{ flex: 1, borderTop: `1px solid ${RULE}`, minWidth: 16 }} />
+            <span style={{
+              fontSize: 10,
+              letterSpacing: '0.1em',
+              color: '#92400e',
+              textTransform: 'uppercase',
+              fontFamily: 'system-ui, sans-serif',
+              background: '#FEF3C7',
+              border: '1px solid #FCD34D',
+              borderRadius: 4,
+              padding: '3px 8px',
+              flexShrink: 0,
+            }}>
+              Pending Review
+            </span>
+          </div>
+
+          {/* Days */}
+          {WEEK_DAYS.map((day) => {
+            if (day === 'Friday') return <FridayCard key="Friday" />
+
+            const meal = getMeal(day)
+            const isSwapOpen = swapDay === day
+
+            return (
+              <div key={day} style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 4 }}>
+                      {day}
+                    </p>
+                    <p style={{ fontSize: 17, color: meal ? INK : MUTED, lineHeight: 1.3, margin: '0 0 3px', fontStyle: meal ? 'normal' : 'italic' }}>
+                      {meal ? meal.meal_name : 'No meal planned'}
+                    </p>
+                    {meal?.cuisine_type && (
+                      <p style={{ fontSize: 12, color: MUTED, fontFamily: 'system-ui, sans-serif', letterSpacing: '0.06em', margin: 0 }}>
+                        {meal.cuisine_type}
+                      </p>
+                    )}
+                  </div>
+                  {meal && !isSwapOpen && (
+                    <button
+                      onClick={() => handleOpenSwap(day)}
+                      style={{
+                        background: 'none',
+                        border: `1px solid ${RULE}`,
+                        borderRadius: 4,
+                        padding: '5px 10px',
+                        fontSize: 11,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: MUTED,
+                        fontFamily: 'system-ui, sans-serif',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        marginTop: 2,
+                      }}
+                    >
+                      Swap
+                    </button>
+                  )}
+                </div>
+
+                {isSwapOpen && (
+                  <SwapPicker
+                    recipes={allRecipes}
+                    loading={loadingRecipes}
+                    currentRecipeId={meal?.recipe_id}
+                    onSelect={(r) => handlePendingSwap(day, r)}
+                    onClose={() => setSwapDay(null)}
+                  />
+                )}
+              </div>
+            )
+          })}
+
+          {/* Approve */}
+          <div style={{ marginTop: 32 }}>
+            {approveError && (
+              <p style={{ fontSize: 13, color: '#ef4444', fontFamily: 'system-ui, sans-serif', marginBottom: 12, textAlign: 'center' }}>
+                {approveError}
+              </p>
+            )}
+            <button
+              onClick={handleApprove}
+              disabled={approving}
+              style={{
+                width: '100%',
+                background: approving ? RULE : GOLD,
+                border: 'none',
+                borderRadius: 6,
+                padding: '16px',
+                fontSize: 13,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: approving ? MUTED : '#fff',
+                fontFamily: 'system-ui, sans-serif',
+                fontWeight: 600,
+                cursor: approving ? 'default' : 'pointer',
+              }}
+            >
+              {approving ? 'Approving…' : 'Approve Menu'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── State 2: Published menu ─────────────────────────────────────────────────
+
+  const getMealByDay = (day) => publishedMenus.find((m) => m.day_of_week === day) ?? null
+
   return (
     <div style={{ background: LINEN, minHeight: '100%', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 28px 120px' }}>
-        {/* Section header */}
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <span style={{ fontSize: 11, letterSpacing: '0.12em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif' }}>
-            Week of {weekLabel}
+            Week of {weekLabel(weekOf)}
           </span>
           <div style={{ flex: 1, borderTop: `1px solid ${RULE}` }} />
         </div>
 
-        {/* Mon–Thu */}
-        {weekDays.map(({ dayName, iso, menu }) => {
-          const isExpanded = expandedIso === iso
+        {publishedMenus.length === 0 && (
+          <p style={{ fontSize: 15, color: MUTED, fontFamily: 'system-ui, sans-serif', paddingTop: 40, textAlign: 'center', fontStyle: 'italic' }}>
+            No menu available yet.
+          </p>
+        )}
+
+        {WEEK_DAYS.map((day) => {
+          if (day === 'Friday') return <FridayCard key="Friday" />
+
+          const menu = getMealByDay(day)
+          const isExpanded = expandedDay === day
+          const isSwapOpen = swapDay === day
           const hasMenu = menu !== null
 
           return (
-            <div key={iso} style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
-              {/* Header row */}
+            <div key={day} style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
               <div
-                onClick={() => hasMenu && handleToggle(iso)}
+                onClick={() => hasMenu && handleToggle(day)}
                 style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', cursor: hasMenu ? 'pointer' : 'default', gap: 8 }}
               >
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 4 }}>
-                    {dayName}
+                    {day}
                   </p>
                   <p style={{ fontSize: 17, color: hasMenu ? INK : MUTED, lineHeight: 1.3, margin: '0 0 3px', fontStyle: hasMenu ? 'normal' : 'italic' }}>
                     {hasMenu ? menu.meal_name : 'No meal planned'}
@@ -406,71 +592,6 @@ export default function MenuTab() {
                   )}
                 </div>
 
-                {/* Rating buttons + chevron */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, paddingTop: 2 }}>
-                  {hasMenu && (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRate(menu.id, 1) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: menu.rating === 1 ? 1 : 0.4 }}
-                      >
-                        <ThumbsUpIcon active={menu.rating === 1} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRate(menu.id, -1) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: menu.rating === -1 ? 1 : 0.4 }}
-                      >
-                        <ThumbsDownIcon active={menu.rating === -1} />
-                      </button>
-                    </>
-                  )}
-                  {hasMenu && <ChevronIcon up={isExpanded} />}
-                </div>
-              </div>
-
-              {/* Expanded recipe */}
-              {isExpanded && hasMenu && (
-                <RecipeDetail
-                  recipe={menu.recipe}
-                  showSwap={showSwap}
-                  onOpenSwap={handleOpenSwap}
-                  onSwap={handleSwap}
-                  onCloseSwap={() => setShowSwap(false)}
-                  recipes={allRecipes}
-                  loadingRecipes={loadingRecipes}
-                />
-              )}
-            </div>
-          )
-        })}
-
-        {/* Friday — always Family Out, no recipe, no actions */}
-        <FridayCard />
-
-        {/* Sat–Sun */}
-        {satSunDays.map(({ dayName, iso, menu }) => {
-          const isExpanded = expandedIso === iso
-          const hasMenu = menu !== null
-
-          return (
-            <div key={iso} style={{ borderTop: `1px solid ${RULE}`, paddingTop: 18, paddingBottom: 18 }}>
-              <div
-                onClick={() => hasMenu && handleToggle(iso)}
-                style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', cursor: hasMenu ? 'pointer' : 'default', gap: 8 }}
-              >
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 11, letterSpacing: '0.14em', color: GOLD, textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 4 }}>
-                    {dayName}
-                  </p>
-                  <p style={{ fontSize: 17, color: hasMenu ? INK : MUTED, lineHeight: 1.3, margin: '0 0 3px', fontStyle: hasMenu ? 'normal' : 'italic' }}>
-                    {hasMenu ? menu.meal_name : 'No meal planned'}
-                  </p>
-                  {menu?.cuisine_type && (
-                    <p style={{ fontSize: 12, color: MUTED, fontFamily: 'system-ui, sans-serif', letterSpacing: '0.06em', margin: 0 }}>
-                      {menu.cuisine_type}
-                    </p>
-                  )}
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, paddingTop: 2 }}>
                   {hasMenu && (
                     <>
@@ -495,10 +616,10 @@ export default function MenuTab() {
               {isExpanded && hasMenu && (
                 <RecipeDetail
                   recipe={menu.recipe}
-                  showSwap={showSwap}
-                  onOpenSwap={handleOpenSwap}
-                  onSwap={handleSwap}
-                  onCloseSwap={() => setShowSwap(false)}
+                  showSwap={isSwapOpen}
+                  onOpenSwap={() => handleOpenSwap(day)}
+                  onSwap={(r) => handlePublishedSwap(day, r)}
+                  onCloseSwap={() => setSwapDay(null)}
                   recipes={allRecipes}
                   loadingRecipes={loadingRecipes}
                 />
