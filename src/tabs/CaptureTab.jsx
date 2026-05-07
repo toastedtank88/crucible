@@ -17,16 +17,20 @@ export default function CaptureTab() {
     e.preventDefault()
     if (!text.trim()) return
 
-    setStatus('sending')
     const webhookUrl = import.meta.env.VITE_N8N_CAPTURE_WEBHOOK
+    if (!webhookUrl) {
+      setStatus('misconfigured')
+      return
+    }
 
+    setStatus('sending')
     try {
       const res = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim(), domain, timestamp: new Date().toISOString() }),
       })
-      if (!res.ok) throw new Error('Failed')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setStatus('sent')
       setText('')
       setTimeout(() => setStatus(null), 2000)
@@ -119,6 +123,11 @@ export default function CaptureTab() {
           {status === 'error' && (
             <p style={{ fontSize: 13, color: '#ef4444', fontFamily: 'system-ui, sans-serif', marginTop: 12, textAlign: 'center' }}>
               Failed to send. Check your connection.
+            </p>
+          )}
+          {status === 'misconfigured' && (
+            <p style={{ fontSize: 13, color: '#ef4444', fontFamily: 'system-ui, sans-serif', marginTop: 12, textAlign: 'center' }}>
+              VITE_N8N_CAPTURE_WEBHOOK is not set.
             </p>
           )}
         </form>
