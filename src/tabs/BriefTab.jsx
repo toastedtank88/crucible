@@ -42,18 +42,28 @@ function calcStreak(dates) {
 export default function BriefTab() {
   const [brief, setBrief] = useState(null)
   const [streak, setStreak] = useState(0)
+  const [quillTasks, setQuillTasks] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+
     async function fetchBrief() {
-      const [briefRes, streakRes] = await Promise.all([
+      const [briefRes, streakRes, quillRes] = await Promise.all([
         supabase.from('daily_briefs').select('id, date, sections, generated_at').order('date', { ascending: false }).limit(1).single(),
         supabase.from('daily_briefs').select('date').order('date', { ascending: false }).limit(60),
+        supabase.schema('quill').from('tasks')
+          .select('id, title, domain, priority, due_date')
+          .eq('schedule_date', today)
+          .eq('status', 'open')
+          .order('domain')
+          .order('priority'),
       ])
       if (briefRes.error) setError(briefRes.error.message)
       else setBrief(briefRes.data)
       if (streakRes.data) setStreak(calcStreak(streakRes.data.map(r => r.date)))
+      if (quillRes.data) setQuillTasks(quillRes.data)
       setLoading(false)
     }
     fetchBrief()
@@ -113,7 +123,7 @@ export default function BriefTab() {
         <ProtocolBlock data={s.protocol} />
         <RelationshipsBlock data={s.relationships} />
         <CalendarBlock data={s.calendar} />
-        <TasksBlock tasks={s.tasks} queue={s.queue} />
+        <TasksBlock tasks={quillTasks ?? s.tasks} queue={quillTasks ? null : s.queue} />
         <TradingBlock data={s.trading} />
         <BodyBlock data={s.body} />
         <LearningBlock data={s.learning} />
