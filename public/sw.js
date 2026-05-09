@@ -1,4 +1,4 @@
-const CACHE = 'crucible-v1';
+const CACHE = 'crucible-v2';
 const SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {

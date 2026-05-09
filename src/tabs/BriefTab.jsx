@@ -79,6 +79,25 @@ export default function BriefTab() {
     )
   }
 
+  if (brief.sections?.parse_error) {
+    return (
+      <div style={{ background: LINEN, minHeight: '100%' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 28px 120px' }}>
+          <p style={{ fontSize: 11, letterSpacing: '0.18em', color: MUTED, textTransform: 'uppercase', margin: '0 0 4px', fontFamily: 'system-ui, sans-serif' }}>
+            Daily Brief
+          </p>
+          <p style={{ fontSize: 22, fontWeight: 700, color: INK, margin: '0 0 24px', fontFamily: "'Georgia', serif", lineHeight: 1.2 }}>
+            {brief.date ? formatDate(brief.date) : ''}
+          </p>
+          <div style={{ borderTop: `1px solid ${RULE}`, marginBottom: 32 }} />
+          <p style={{ fontSize: 15, color: MUTED, fontFamily: 'system-ui, sans-serif', lineHeight: 1.6 }}>
+            Brief generation failed — the workflow ran but the output couldn't be parsed into sections. Re-trigger the n8n workflow to regenerate.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const s = brief.sections
 
   return (
