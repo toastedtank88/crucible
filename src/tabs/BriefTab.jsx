@@ -131,7 +131,7 @@ export default function BriefTab() {
         <TodayFrameBlock data={s.today_frame} />
         <ProtocolBlock data={s.protocol} />
         <RelationshipsBlock data={s.relationships} />
-        <CalendarBlock data={s.calendar} />
+        <CalendarBlock data={s.calendar} briefDate={brief.date} />
         <TasksBlock tasks={s.tasks} queue={s.queue} />
         <TradingBlock data={s.trading} />
         <BodyBlock data={s.body} />
